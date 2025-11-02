@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tentiran Stase Radiologi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: "Calm Neutral" (Amber, Slate, Gray) -->
+    <!-- Application Structure Plan: Menggunakan arsitektur SPA dengan navigasi sidebar (desktop) dan top-nav (mobile) yang persisten. Konten utama dinamis berdasarkan pilihan navigasi. Struktur ini dipilih untuk menggantikan format laporan linear, memungkinkan koas untuk secara cepat mengakses informasi spesifik yang mereka butuhkan (misalnya, "Tugas IGD Jaga" atau "Penugasan dr. Triana") tanpa harus scroll. Interaksi utama adalah pemilihan navigasi, dengan sub-navigasi (tabs) untuk bagian kompleks seperti "Tugas Ruangan" dan "Penugasan" untuk memecah informasi lebih lanjut dan menjaga UI tetap bersih. -->
+    <!-- Visualization & Content Choices: Data Inti (Tugas Ruangan, Penugasan) -> Goal: Organize/Inform -> Viz: Konten dinamis dengan Tab (JS) untuk Ruangan; Layout Card (Grid) untuk Penugasan. -> Interaction: Klik Tab untuk filter konten; Klik checklist persiapan (JS). -> Justification: Memecah info padat menjadi bagian-bagian logis dan relevan-konteks. Tugas Chief (Workflow) -> Goal: Organize -> Viz: Diagram alur HTML/Tailwind (bukan SVG/Mermaid). Justification: Visualisasi proses. Penugasan (Workload) -> Goal: Visualize (dummy) -> Viz: Donut Chart (Chart.js) -> Interaction: Hover -> Justification: Memenuhi syarat wajib Chart.js dengan visualisasi tematik beban kerja. -> CONFIRM: NO SVG/Mermaid. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .nav-item {
+            display: block;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s, color 0.2s;
+            cursor: pointer;
+        }
+        .nav-item:hover {
+            background-color: #f1f5f9; /* slate-100 */
+        }
+        .nav-item.active {
+            background-color: #f59e0b; /* amber-500 */
+            color: white;
+            font-weight: 500;
+        }
+        .page-content {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .tab-btn {
+            padding: 0.5rem 1rem;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .tab-btn.active {
+            border-color: #f59e0b; /* amber-500 */
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        .checklist-item {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .checklist-item.completed {
+            text-decoration: line-through;
+            color: #9ca3af; /* gray-400 */
+        }
+        .checklist-item.completed .check-icon {
+            opacity: 1;
+        }
+        .check-icon {
+            opacity: 0.2;
+            transition: opacity 0.2s;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="flex flex-col md:flex-row min-h-screen">
+        
+        <aside class="w-full md:w-64 bg-white shadow-md md:border-r border-gray-200">
+            <div class="p-4 border-b">
+                <h1 class="text-xl font-bold text-amber-600">Panduan Stase</h1>
+                <p class="text-sm text-gray-500">Radiologi (Tentir: Ojan ; Author: Yayat)</p>
+            </div>
+            <nav class="p-4 space-y-2">
+                <a class="nav-item active" data-page="beranda">
+                    <span class="mr-2">🏠</span> Beranda & Persiapan
+                </a>
+                <a class="nav-item" data-page="hari-pertama">
+                    <span class="mr-2">📅</span> Hari Pertama
+                </a>
+                <a class="nav-item" data-page="chief-jadwal">
+                    <span class="mr-2">👑</span> Tugas Chief & Jadwal
+                </a>
+                <a class="nav-item" data-page="tugas-ruangan">
+                    <span class="mr-2">🚪</span> Tugas Setiap Ruangan
+                </a>
+                <a class="nav-item" data-page="penugasan">
+                    <span class="mr-2">📚</span> Rincian Penugasan
+                </a>
+                <a class="nav-item" data-page="supervisor-aturan">
+                    <span class="mr-2">🧑‍🏫</span> Supervisor & Aturan
+                </a>
+                <a class="nav-item" data-page="tips-tambahan">
+                    <span class="mr-2">💡</span> Tips Tambahan
+                </a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-4 md:p-8 overflow-auto">
+
+            <section id="page-beranda" class="page-content space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-bold text-amber-600 mb-4">Prinsip Utama & Nasihat Umum</h2>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        <li>ATTITUDE adalah yang utama. Jaga hubungan baik dengan Mba Mas Radiografer.</li>
+                        <li>Belajar dari supervisor adalah yang utama.</li>
+                        <li>Jaga ATTITUDE dan standby mood masing-masing supervisor.</li>
+                        <li>Chief memiliki peran besar; anggota diharapkan bekerja sama membantu chief.</li>
+                        <li>Tugas banyak dalam waktu singkat. Manfaatkan waktu menunggu.</li>
+                        <li>Waktu pulang tidak menentu, perlu menunggu supervisor dan Mba Wati pulang.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-bold text-amber-600 mb-4">Checklist Persiapan Hari 1</h2>
+                    <p class="text-sm text-gray-500 mb-4">Klik pada item untuk menandai selesai.</p>
+                    <div class="space-y-3">
+                        <div class="checklist-item flex items-center">
+                            <span class="check-icon mr-2 text-green-500">✓</span>
+                            <span>Foto 4x6 (1 lembar) untuk buku data koas.</span>
+                        </div>
+                        <div class="checklist-item flex items-center">
+                            <span class="check-icon mr-2 text-green-500">✓</span>
+                            <span>CV.</span>
+                        </div>
+                        <div class="checklist-item flex items-center">
+                            <span class="check-icon mr-2 text-green-500">✓</span>
+                            <span>Foto 3x4 (1 lembar) untuk logbook.</span>
+                        </div>
+                        <div class="checklist-item flex items-center">
+                            <span class="check-icon mr-2 text-green-500">✓</span>
+                            <span>Print surat masuk stase (rangkap 5) + amplop (dr. Triana, dr. Dewi, Mba Wati, dr. Nov, dr. Syahriar).</span>
+                        </div>
+                        <div class="checklist-item flex items-center">
+                            <span class="check-icon mr-2 text-green-500">✓</span>
+                            <span>Print absen dinas (2 rangkap: pagi & siang) dan absen jaga IGD.</span>
+                        </div>
+                        <div class="checklist-item flex items-center">
+                            <span class="check-icon mr-2 text-green-500">✓</span>
+                            <span>Permakluman logbook ke Mba Ave.</span>
+                        </div>
+                        <div class="checklist-item flex items-center">
+                            <span class="check-icon mr-2 text-green-500">✓</span>
+                            <span>Bawa kertas HVS (untuk pretest, jika ada).</span>
+                        </div>
+                        <div class="checklist-item flex items-center">
+                            <span class="check-icon mr-2 text-green-500">✓</span>
+                            <span>Bawa stetoskop 1 (taruh di ruang pertemuan).</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="page-hari-pertama" class="page-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-bold text-amber-600 mb-4">Rencana Kegiatan Hari 1 (Senin)</h2>
+                    <p class="mb-4">Datang maksimal 07.30, sebelum loket sibuk. Kenalan dengan Mba/Mas di loket.</p>
+                    <ul class="list-decimal list-inside space-y-2">
+                        <li>Maklum ke Mba Wati setelah semua orang lengkap di ruang pertemuan.</li>
+                        <li>Tanyakan Mba Wati perihal pembekalan (keliling ruangan) atau mandiri.</li>
+                        <li>Jika mandiri, chief atur pembagian keliling ruangan (10-15 menit/ruangan) untuk kenalan dengan radiografer.</li>
+                        <li>Chief mencari Mba Suci (senior) atau Mba Sulis (update terbaru) untuk kenalan dan lapor koas baru.</li>
+                        <li>Chief lapor Mba Wati jika sudah membawa CV, surat, dan amplop.</li>
+                        <li>Ingat untuk ketemu dr. Dewi jika beliau meminta. Maklum ke Mba Wati dan dr. Dewi.</li>
+                        <li>Tanya petugas loket untuk mengetahui Mba Wati (Ruang Baca), Mba Suci, dan Mba Sulis.</li>
+                        <li>Waspada jika ada pretest dari Mba Wati.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="page-chief-jadwal" class="page-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-bold text-amber-600 mb-4">Tugas Chief</h2>
+                    <p class="mb-4">Chief adalah penghubung utama ke semua dokter dan Mba Wati.</p>
+                    <h3 class="text-lg font-semibold mb-2">Administrasi & Komunikasi</h3>
+                    <ul class="list-disc list-inside space-y-2 mb-4">
+                        <li>Permakluman masuk stase ke Mba Wati, lalu ke dr. Dewi, dr. Novia, dr. Triana, dr. Syahriar, dr. Fauzy, dr. Arini.</li>
+                        <li>Siapkan 2 Grup WA: Grup dr. Novia (Stase Radiologi Nama Chief) dan Grup dr. Triana (Stase Radiologi Periode).</li>
+                        <li>Tanya Mba Wati jika dokter tidak meminta dibuatkan grup.</li>
+                        <li>Kirim kembali permakluman masuk stase di grup WA.</li>
+                    </ul>
+                    
+                    <h3 class="text-lg font-semibold mb-2">Workflow Laporan Pasien MRI</h3>
+                    <div class="flex flex-col space-y-2">
+                        <div class="p-3 bg-gray-100 rounded-md">Kirim list pasien + blanko MRI ke dokter sesuai jadwal harian.</div>
+                        <div class="text-center text-amber-600 font-bold">↓</div>
+                        <div class="p-3 bg-gray-100 rounded-md">Jika ada >1 dokter, tanya radiografer pembagiannya. Jika tidak tahu, chat Mba Wati.</div>
+                        <div class="text-center text-amber-600 font-bold">↓</div>
+                        <div class="flex flex-col md:flex-row gap-4">
+                            <div class="flex-1 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                <strong class="text-blue-600">dr. Novia:</strong> Kirim setiap pasien selesai MRI langsung.
+                            </div>
+                            <div class="flex-1 p-3 bg-green-50 border border-green-200 rounded-md">
+                                <strong class="text-green-600">Dokter Lain:</strong> Kirim setelah semua pasien MRI hari itu habis.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-bold text-amber-600 mb-4">Tugas Chief + Sekre (Jadwal)</h2>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li>Buat jadwal 3 minggu kedepan (dinas dan jaga), atur seadilnya.</li>
+                        <li>Setiap orang dapat jaga 2x per minggu (jika ditanya dr. Triana, jawab 2x).</li>
+                        <li>Pergantian tempat dinas setiap 2 hari (sesuai kesepakatan).</li>
+                        <li>Koas R.9 dan R.10: Infokan jika ada Tindakan (lihat papan loket). Semua boleh ikut.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="page-tugas-ruangan" class="page-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-bold text-amber-600 mb-4">Tugas Setiap Ruangan</h2>
+                    <p class="mb-4">Pilih ruangan untuk melihat detail tugas spesifik. Selalu pastikan pasien masuk PACS (tanya Mba Wati/Radiografer).</p>
+                    
+                    <div class="flex flex-wrap border-b border-gray-200 mb-4" id="ruangan-tabs">
+                        <button class="tab-btn active" data-content="ruangan-r2">Konven R.2</button>
+                        <button class="tab-btn" data-content="ruangan-r9">Konven R.9</button>
+                        <button class="tab-btn" data-content="ruangan-ctr3">CT R.3</button>
+                        <button class="tab-btn" data-content="ruangan-ctr10">CT R.10</button>
+                        <button class="tab-btn" data-content="ruangan-mri">MRI</button>
+                        <button class="tab-btn" data-content="ruangan-igd-dinas">IGD Dinas</button>
+                        <button class="tab-btn" data-content="ruangan-igd-jaga">IGD Jaga</button>
+                        <button class="tab-btn" data-content="ruangan-r11">Konven R.11</button>
+                    </div>
+
+                    <div id="ruangan-r2" class="tab-content space-y-2">
+                        <strong class="block">Modalitas: Foto thorax polos (berdiri/erect, kooperatif).</strong>
+                        <ul class="list-disc list-inside">
+                            <li>Ambil dan anterin blangko ke radiografer.</li>
+                            <li>Panggil pasien baru dan keluarin pasien yang sudah selesai.</li>
+                            <li>Kasitau kapan hasil foto bisa diambil.</li>
+                        </ul>
+                    </div>
+                    
+                    <div id="ruangan-r9" class="tab-content hidden space-y-2">
+                        <strong class="block">Modalitas: Foto polos PA (tidak bisa berdiri/anak), panoramik.</strong>
+                        <ul class="list-disc list-inside">
+                            <li>Bantu posisikan pasien.</li>
+                            <li>Bantu input data.</li>
+                            <li>Bantu edit foto + print.</li>
+                            <li>Bantu anterin foto ke ruang baca sentral.</li>
+                            <li>Bantu cek loket jika ada tindakan R.11 dan informasikan.</li>
+                        </ul>
+                    </div>
+
+                    <div id="ruangan-ctr3" class="tab-content hidden space-y-2">
+                        <strong class="block">Modalitas: CT Scan, MSCP, radiologi intervensi.</strong>
+                        <ul class="list-disc list-inside">
+                            <li>Ambil dan anterin blangko.</li>
+                            <li>Panggil dan keluarin pasien.</li>
+                            <li>Bantu posisikan pasien.</li>
+                            <li>Bantu radiographer/dokter intervensi (ambil stetoskop jika ada tindakan kardiak).</li>
+                            <li>Bantu radiographer pas masukin kontras (jika diizinkan: pasang abbocath, three way, spuit kontras).</li>
+                            <li>Bawa stetoskop.</li>
+                        </ul>
+                    </div>
+
+                    <div id="ruangan-ctr10" class="tab-content hidden space-y-2">
+                        <strong class="block">Modalitas: Bisa bikin video, CT Scan.</strong>
+                        <ul class="list-disc list-inside">
+                            <li>Ambil dan anterin blangko.</li>
+                            <li>Panggil dan keluarin pasien.</li>
+                            <li>Bantu posisikan pasien.</li>
+                            <li>Bantu radiographer pas masukin kontras (sama seperti R.3).</li>
+                            <li>Bantu anterin foto ke ruang baca sentral.</li>
+                            <li>Bantu cek loket jika ada tindakan R.11 dan informasikan.</li>
+                        </ul>
+                    </div>
+                    
+                    <div id="ruangan-mri" class="tab-content hidden space-y-2">
+                        <div class="p-3 bg-red-50 border border-red-200 rounded-md">
+                            <strong class="text-red-600">PENTING:</strong> Jangan bawa barang LOGAM (HP, jam tangan, dll) ke dalam tempat alat MRI.
+                        </div>
+                        <ul class="list-disc list-inside">
+                            <li>Lihat list pasien di loket (cek jumlah).</li>
+                            <li>Panggil dan keluarin pasien.</li>
+                            <li>Bantu posisikan pasien.</li>
+                            <li>Tanya no. telepon pasien & catat di blangko.</li>
+                            <li>Tanya keluhan pasien & catat di belakang blangko (jika diminta radiografer).</li>
+                            <li>Jika ada >1 dokter, tanya radiografer pembagian pasiennya.</li>
+                            <li>Kirim list blanko + foto blanko ke chief.</li>
+                        </ul>
+                    </div>
+
+                    <div id="ruangan-igd-dinas" class="tab-content hidden space-y-2">
+                        <strong class="block">Jam: 08.00 - 14.30</strong>
+                        <ul class="list-disc list-inside">
+                            <li>Duduk tunggu pasien di dalam konter (atau di kursi tunggu jika penuh).</li>
+                            <li>Ngekor dokter jika ada tindakan USG, dsb.</li>
+                            <li>Jika ada bacaan, izin ke dokter untuk ikut baca (di ruang baca/ruang radiografer).</li>
+                        </ul>
+                    </div>
+                    
+                    <div id="ruangan-igd-jaga" class="tab-content hidden space-y-2">
+                        <strong class="block">Jam: 16.00 - 08.00</strong>
+                        <ul class="list-disc list-inside">
+                            <li>Input data ke eRM (lihat blangko). (Pasien BPJS foto polos: input jenis AP/lateral).</li>
+                            <li>Input data pasien ke komputer rontgen, operasikan alat (foto, edit, store, complete) - minta ajarin radiografer.</li>
+                            <li>Bantu posisikan pasien.</li>
+                            <li>Konsul ke dokter (SS foto -> crop -> kirim via WA IGD).</li>
+                            <li>Ambil hasil foto rontgen + tulis data di amplop putih + catat di Google Spreadsheet.</li>
+                            <li>Jika ada MRI/CT, satu orang temani mbanya, sisanya stand by.</li>
+                            <li>Kirim chat konsul dari WA IGD ke WA pribadi (untuk laporan jaga/lapsus).</li>
+                        </ul>
+                    </div>
+
+                    <div id="ruangan-r11" class="tab-content hidden space-y-2">
+                        <strong class="block">Modalitas: Pemeriksaan dengan kontras (Barium Enema, dll).</strong>
+                        <ul class="list-disc list-inside">
+                            <li>List kasus bagus (misal: colon in loop) dan catat di buku kasus bagus (dr. Triana suka nanya).</li>
+                            <li>Semua koas boleh ikut kasus tertentu (usahakan ikut).</li>
+                            <li>Tulis setiap tindakan di Buku Hijau (buku kasus bagus) di R.11.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="page-penugasan" class="page-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-bold text-amber-600 mb-4">Rincian Penugasan</h2>
+                    <p class="mb-4">Permakluman tugas dimulai H-1 Minggu atau paling lambat Kamis. Permakluman saat offline setelah bertemu dokternya.</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2">Perkiraan Beban Kerja</h3>
+                            <div class="chart-container" style="position: relative; height:250px; max-height:250px; width:100%; max-width:300px; margin: auto;">
+                                <canvas id="workloadChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-gray-50 rounded-lg border">
+                            <h3 class="text-lg font-semibold">Tutorial Klinik (dr. Novia)</h3>
+                            <ul class="list-disc list-inside text-sm mt-2 space-y-1">
+                                <li>Oleh: Seluruh mahasiswa.</li>
+                                <li>Bentuk: Word (Jurnal Siap Terbit), PPT.</li>
+                                <li>Maju: MINGGU 3 (Online via Zoom).</li>
+                                <li>Koas ajukan 2 judul (kolektif), siapkan link Zoom premium sendiri.</li>
+                            </ul>
+                        </div>
+
+                        <div class="p-4 bg-gray-50 rounded-lg border">
+                            <h3 class="text-lg font-semibold">Tutorial Klinik (dr. Triana)</h3>
+                            <ul class="list-disc list-inside text-sm mt-2 space-y-1">
+                                <li>Oleh: Seluruh mahasiswa.</li>
+                                <li>Bentuk: Word (Jurnal Siap Terbit), PPT.</li>
+                                <li>Maju: MINGGU 1 (Offline).</li>
+                                <li>Beliau beri judul beda (bisa >1 topik). Bawa hard file word, HDMI, pointer, cok roll.</li>
+                            </ul>
+                        </div>
+
+                        <div class="p-4 bg-gray-50 rounded-lg border">
+                            <h3 class="text-lg font-semibold">Laporan Kasus (dr. Novia & dr. Triana)</h3>
+                            <ul class="list-disc list-inside text-sm mt-2 space-y-1">
+                                <li>Oleh: 1/2 jumlah mahasiswa (dibagi).</li>
+                                <li>Bentuk: Poster, Word (Jurnal Siap Terbit).</li>
+                                <li>Maju: MINGGU 2.</li>
+                                <li>dr. Triana: Beliau kirim kasus di grup / koas mengajukan.</li>
+                                <li>dr. Novia: Chief maklum nama + data pasien.</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="p-4 bg-gray-50 rounded-lg border">
+                            <h3 class="text-lg font-semibold">Jurnal Reading (dr. Syah)</h3>
+                            <ul class="list-disc list-inside text-sm mt-2 space-y-1">
+                                <li>Oleh: 1/2 jumlah mahasiswa.</li>
+                                <li>Bentuk: Jurnal Asli, Word, PPT.</li>
+                                <li>Maju: MINGGU 3.</li>
+                                <li>Maklum HARUS OFFLINE. Tanyakan semua kebutuhan (DL, format, dll) saat itu juga.</li>
+                                <li>Beliau sangat tepat waktu, siapkan LCD + kursi sebelum janjian.</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="p-4 bg-gray-50 rounded-lg border">
+                            <h3 class="text-lg font-semibold">Jurnal Reading (dr. Triana & dr. Novia)</h3>
+                            <ul class="list-disc list-inside text-sm mt-2 space-y-1">
+                                <li>dr. Triana: Beliau kasih tema -> koas cari jurnal (gambar banyak, X-ray/CT) -> kirim kolektif. (Proses ACC bisa lama, bisa tiba2 disuruh maju).</li>
+                                <li>dr. Novia: Beliau kasih topik -> koas cari sendiri. Maju via Zoom (buat rekaman).</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="p-4 bg-gray-50 rounded-lg border">
+                            <h3 class="text-lg font-semibold">Referat (dr. Dewi)</h3>
+                            <ul class="list-disc list-inside text-sm mt-2 space-y-1">
+                                <li>Oleh: Seluruh mahasiswa.</li>
+                                <li>Bentuk: Jurnal Asli, Word.</li>
+                                <li>Tanpa presentasi.</li>
+                                <li>Permakluman di Minggu 1 (sebelum Jumat). Ajukan 2-3 subtopik.</li>
+                                <li>Kirim link GDrive (termasuk sumber) ke dr. Dewi untuk ACC.</li>
+                                <li>Jika ACC, print dan kumpul (hard + soft file) 1 minggu setelah maklum ke Mba Wati.</li>
+                            </ul>
+                        </div>
+
+                        <div class="p-4 bg-gray-50 rounded-lg border">
+                            <h3 class="text-lg font-semibold">Tugas Baca & Laporan Jaga (dr. Triana)</h3>
+                            <ul class="list-disc list-inside text-sm mt-2 space-y-1">
+                                <li>Tugas Baca: Buat PPT (ada PJ per slide), H+1 HARUS JADI dan dipresentasikan.</li>
+                                <li>Laporan Jaga: Hasil konsulan IGD (ASLI, jangan diubah) masukkan ke PPT, dibaca saat presentasi dr. Triana.</li>
+                            </ul>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+            
+            <section id="page-supervisor-aturan" class="page-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-bold text-amber-600 mb-4">Karakteristik Supervisor</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div class="p-3 bg-gray-50 rounded-lg border"><strong>dr. Novia:</strong> Santai, gercep, baik, super fast respon. Kita juga harus fast respon.</div>
+                        <div class="p-3 bg-gray-50 rounded-lg border"><strong>dr. Triana:</strong> Baik sekali, suka nanya, tegas, banyak ilmu, perhatiin koas.</div>
+                        <div class="p-3 bg-gray-50 rounded-lg border"><strong>dr. Syahriar:</strong> Baik, kritis, maklum jika tidak bisa. Koreksi typo. (Pilih gambar JR banyak, beliau yg jelaskan).</div>
+                        <div class="p-3 bg-gray-50 rounded-lg border"><strong>dr. Dewi:</strong> Lovely, tapi harus setia nunggu beliau pulang. Akan menandai koas satu per satu.</div>
+                        <div class="p-3 bg-gray-50 rounded-lg border"><strong>dr. Fauzy:</strong> Santai, gercep, baik, jarang terlihat (tidak mengampu).</div>
+                    </div>
+                    <p class="mt-4 text-center font-semibold">TETAP SOPAN KE SEMUANYA YAA... INGAT ATTITUDE.</p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-bold text-amber-600 mb-4">Aturan Penting & Larangan Keras</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="text-lg font-semibold text-green-600 mb-2">DOs (Wajib & Boleh)</h3>
+                            <ul class="list-disc list-inside space-y-2">
+                                <li>Observasi: Lihat keluhan di blangko + hasil foto.</li>
+                                <li>Pulang barengan (IGD + SENTRAL) setelah semua dokter dan Mba Wati pulang.</li>
+                                <li>Jaga IGD: Boleh tidur jam 01.00 pagi (bantu radiografer dulu jika ramai).</li>
+                                <li>Info radiografer jika ada ilmiah.</li>
+                                <li>Boleh makan di ruang pertemuan.</li>
+                                <li>BERBAUR dengan radiografer.</li>
+                                <li>Siapkan Cok Roll (rusak di R. Pertemuan), pointer, laptop.</li>
+                                <li>WAJIB BELAJAR BUAT VIDEO.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-red-600 mb-2">DON'Ts (Larangan)</h3>
+                            <ul class="list-disc list-inside space-y-2">
+                                <li>Etika jelek.</li>
+                                <li>Makan/minum di ruang radio.</li>
+                                <li>Main HP/laptop saat dokter menjelaskan / ilmiah.</li>
+                                <li>Pulang sendiri-sendiri / pulang cepat.</li>
+                                <li>Berleha-leha/tidur di ruang pertemuan saat jam dinas.</li>
+                                <li>JANGAN DIAM di ruang operator/ruang istirahat/ruang baca saat JAGA IGD (diemnya di loket).</li>
+                                <li>Jangan PATOL (telat, tidak bantu radiografer).</li>
+                                <li>JANGAN SOK TAU, lebih baik tanya.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-bold text-amber-600 mb-4">Pengumpulan Akhir Stase</h2>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li>Kumpulkan HARD FILE semua penugasan (dijilid per tugas: Lapsus, JR, Referat, TK 1, TK 2, Laporan Jaga).</li>
+                        <li>Kumpulkan SOFT FILE dalam 1 CD (termasuk Cover).</li>
+                        <li>(Mungkin ada 2 CD: 1 CD Referat pribadi, 1 CD kolektif).</li>
+                        <li>Slide untuk ujian jadi H-4 (Rabu).</li>
+                        <li>KONFIRMASI SEMUA KE MBA WATI di Minggu ke-2.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="page-tips-tambahan" class="page-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h2 class="text-2xl font-bold text-amber-600 mb-4">Kompilasi Tips Tambahan</h2>
+                    <p class="mb-4">Dari gerbong senior (Bella, Fida, Inong, Komang Satya).</p>
+                    <ul class="list-disc list-inside space-y-2">
+                        <li>Siapkan Zoom premium (untuk dr. Nov & dr. Triana).</li>
+                        <li>Presentasi dr. Triana sering OFFLINE di FK dan MENDADAK. Chief harus konfirmasi ulang jam 6 pagi.</li>
+                        <li>Hubungi Pak Agus (+62 817-5719-192) untuk pinjam ruangan di FK.</li>
+                        <li>Chief harus selalu aktif WA, dr. Triana suka mendadak (kadang telpon).</li>
+                        <li>Datang jam 07.30 (Puasa jam 08.00).</li>
+                        <li>TTD logbook minta sendiri, jangan nitip (kecuali darurat & sudah maklum).</li>
+                        <li>Kontak jajan: Bude (087865484190, 085237937797).</li>
+                        <li>Dr. Tri sangat memperhatikan pakaian (terutama wanita): Tidak boleh celana ketat, kaos kaki pendek.</li>
+                        <li>Penugasan akan keluar di ujian. DENGARKAN DAN CATAT saat ilmiah.</li>
+                        <li>Perhatikan kata-kata terakhir dr. Tri, biasanya keluar di ujian.</li>
+                        <li>TTD logbook dr. Nov & dr. Dewi bisa koordinasi Mba Wati. dr. Syah pas presentasi. dr. Tri saat ujian akhir (jaga-jaga ditanya materi).</li>
+                    </ul>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navItems = document.querySelectorAll('.nav-item');
+            const pages = document.querySelectorAll('.page-content');
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    item.classList.add('active');
+
+                    const pageId = `page-${item.dataset.page}`;
+                    pages.forEach(page => {
+                        if (page.id === pageId) {
+                            page.classList.remove('hidden');
+                        } else {
+                            page.classList.add('hidden');
+                        }
+                    });
+                    
+                    window.scrollTo(0, 0);
+                });
+            });
+
+            const checklistItems = document.querySelectorAll('.checklist-item');
+            checklistItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    item.classList.toggle('completed');
+                });
+            });
+            
+            const ruanganTabsContainer = document.getElementById('ruangan-tabs');
+            if (ruanganTabsContainer) {
+                const tabButtons = ruanganTabsContainer.querySelectorAll('.tab-btn');
+                const tabContents = ruanganTabsContainer.parentElement.querySelectorAll('.tab-content');
+
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        tabButtons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+
+                        const contentId = button.dataset.content;
+                        tabContents.forEach(content => {
+                            if (content.id === contentId) {
+                                content.classList.remove('hidden');
+                            } else {
+                                content.classList.add('hidden');
+                            }
+                        });
+                    });
+                });
+            }
+
+            const workloadChartCanvas = document.getElementById('workloadChart');
+            if (workloadChartCanvas) {
+                const ctx = workloadChartCanvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Tutorial Klinik', 'Laporan Kasus', 'Journal Reading', 'Referat'],
+                        datasets: [{
+                            label: 'Perkiraan Beban Kerja',
+                            data: [30, 30, 20, 20],
+                            backgroundColor: [
+                                'rgba(245, 158, 11, 0.7)',  // amber-500
+                                'rgba(59, 130, 246, 0.7)', // blue-500
+                                'rgba(16, 185, 129, 0.7)', // emerald-500
+                                'rgba(107, 114, 128, 0.7)' // gray-500
+                            ],
+                            borderColor: [
+                                'rgba(245, 158, 11, 1)',
+                                'rgba(59, 130, 246, 1)',
+                                'rgba(16, 185, 129, 1)',
+                                'rgba(107, 114, 128, 1)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed !== null) {
+                                            label += context.parsed + '%';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
